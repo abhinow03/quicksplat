@@ -1,0 +1,36 @@
+# Working data — never commit these
+workspace/
+data/frames/
+data/colmap/
+data/video/
+checkpoints/
+outputs/
+logs/
+
+# Large files
+*.ply
+*.mp4
+*.mov
+*.m4v
+*.avi
+*.mkv
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Conda envs
+miniconda3/
+envs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
