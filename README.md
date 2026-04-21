@@ -161,7 +161,44 @@ colmap/dense/   ← PINHOLE cameras + registered images
 output.ply      ← INRIA-format Gaussian Splat
 ```
 
-Built on [3DGRUT](https://github.com/nv-tlabs/3dgrut) (NVIDIA) and [COLMAP](https://colmap.github.io/).
+---
+
+## Built on
+
+### 3DGRUT — NVIDIA
+The training engine. Does the actual Gaussian Splatting.
+
+```bash
+# Clone manually (setup_linux.sh does this automatically)
+git clone --recursive https://github.com/nv-tlabs/3dgrut.git
+```
+
+- Repo: **https://github.com/nv-tlabs/3dgrut**
+- Implements both 3DGUT (unscented transform, faster) and 3DGRT (ray tracing, higher quality)
+- `setup_linux.sh` clones it into `~/3dgrut_setup/repos/3dgrut/` and builds all CUDA extensions
+- First training run compiles JIT kernels — expect a 3–5 min wait before training starts
+
+### COLMAP
+Structure-from-Motion — turns frames into a 3D camera pose reconstruction.
+
+```bash
+# Installed automatically into the 'tools' conda env
+mamba install -c conda-forge colmap ffmpeg libfaiss
+```
+
+- Version used: **COLMAP 4.0.3 CUDA** (conda-forge)
+- Docs: **https://colmap.github.io**
+- Note: COLMAP 4.x renamed flags (`SiftExtraction` → `FeatureExtraction`) — the old names silently fail. `splat.sh` uses the correct 4.x flags.
+
+### ffmpeg
+Frame extraction and video probing.
+
+```bash
+# Also installed into the 'tools' conda env alongside COLMAP
+mamba install -c conda-forge ffmpeg
+```
+
+- Version used: **ffmpeg 7.1.1**
 
 ---
 
