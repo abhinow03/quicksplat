@@ -1,0 +1,97 @@
+# quicksplat — 3DGRUT training configuration
+# Generated from a real run on RTX 4090 — adjust paths and env names to match your setup.
+#
+# This is the resolved config from a full 30k-iteration run on a toy F1 car.
+# These values are passed as Hydra overrides in splat.sh — this file documents
+# what was actually used. To change defaults, edit splat.sh or pass flags on the CLI.
+#
+# Framework : 3DGRUT (NVIDIA) — https://github.com/nv-tlabs/3dgrut
+# App config : +apps=colmap_3dgut  (3DGUT renderer, recommended for real scenes)
+# Hardware   : NVIDIA RTX 4090, CUDA driver 13.0, toolkit 11.8
+
+n_iterations: 30000
+seed_initialization: 42
+
+# Training flags
+with_gui: false
+with_viser_gui: false
+log_frequency: 500       # print metrics every N iters
+val_frequency: 999999    # disable intermediate validation (set low to enable)
+compute_extra_metrics: true
+
+# Checkpoints saved at these iterations
+checkpoint:
+  iterations:
+    - 7000
+    - 30000
+
+# PLY export (output file)
+export_ply:
+  enabled: true
+  path: output.ply      # overridden by splat.sh at runtime
+
+# Model
+model:
+  density_activation: sigmoid
+  scale_activation: exp
+  default_density: 0.1
+  default_scale_factor: 1.0
+  optimize_density: true
+  optimize_features_albedo: true
+  optimize_features_specular: true
+  optimize_position: true
+  optimize_rotation: true
+  optimize_scale: true
+  bvh_update_frequency: 1
+  progressive_training:
+    feature_type: sh
+    init_n_features: 0
+    max_n_features: 3           # spherical harmonics degree
+    increase_frequency: 1000
+    increase_step: 1
+  background:
+    name: background-color
+    color: black
+
+# Optimiser (Adam)
+optimizer:
+  type: adam
+  lr: 0.0
+  eps: 1.0e-15
+  params:
+    positions:        { lr: 0.00016 }
+    density:          { lr: 0.05 }
+    features_albedo:  { lr: 0.0025 }
+    rotation:         { lr: 0.001 }
+    scale:            { lr: 0.005 }
+
+# Learning rate schedule
+scheduler:
+  positions:
+    type: exp
+    lr_init:  0.00016
+    lr_final: 1.6e-06
+    max_steps: 30000
+
+# Loss
+loss:
+  use_l1:    true
+  lambda_l1: 0.8
+  use_ssim:  true
+  lambda_ssim: 0.2
+
+# Densification / pruning strategy
+strategy:
+  method: GSStrategy
+  densify:
+    params: positions
+    frequency: 300
+    start_iteration: 500
+    end_iteration: 15000
+    clone_grad_threshold: 0.0002
+    split_grad_threshold: 0.0002
+    relative_size_threshold: 0.01
+    split:
+      n_gaussians: 2
+  prune:
+    frequency: 100
