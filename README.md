@@ -143,7 +143,7 @@ After setup completes:
 
 ## Shoot your video
 
-> Shoot **outside-in** with the object stationary in the centre.
+> Shoot **outside-in**(easier) with the object stationary in the centre. Works for inside-out should also work, but I haven't tried it 
 > Do **3 complete loops** around the object:
 >
 > | Loop | Camera height | Camera angle |
@@ -168,18 +168,6 @@ cp /path/to/myvideo.mp4 .
 bash ~/quicksplat/splat.sh myvideo.mp4
 ```
 
-**SSH tip:** run inside `tmux` so the job survives a disconnect:
-```bash
-tmux new-session -s splat
-bash ~/quicksplat/splat.sh myvideo.mp4
-# Ctrl+B, D to detach  |  tmux attach -t splat to reconnect
-```
-
-**Download and view the result:**
-```bash
-scp user@host:~/my_scene/output.ply ./
-# → Drag output.ply into https://supersplat.playcanvas.com
-```
 
 **On Windows:** use `splat.ps1` via PowerShell (requires WSL2). See [install/setup_windows.md](install/setup_windows.md).
 
@@ -281,10 +269,6 @@ The pipeline runs entirely on your local GPU. Nothing is uploaded anywhere.
 - [configs/train_config.yaml](configs/train_config.yaml) — Training config (from a real run)
 
 ---
-
-## License
-
-MIT — do whatever you want with it.
 
 ## Contributing
 
