@@ -135,7 +135,7 @@ if conda env list | grep -q "^tools "; then
 else
   step "Creating 'tools' env (COLMAP 4.x + ffmpeg)..."
   mamba create -y -n tools -c conda-forge \
-    colmap ffmpeg libfaiss \
+    colmap ffmpeg libfaiss python pillow numpy \
     2>&1 | tee -a "$LOG"
   ok "'tools' env created"
 fi

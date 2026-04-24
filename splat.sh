@@ -10,6 +10,7 @@
 #    --iters N         Training iterations (default: 30000)
 #    --preview         Quick 7k-iter preview run (~2 min on RTX 4090)
 #    --fps N           Override auto frame extraction fps
+#    --blur-pct N      Drop blurriest bottom N% of frames before COLMAP (default: 20)
 #    --model NAME      colmap_3dgut (default) | colmap_3dgrt |
 #                      colmap_3dgut_mcmc | colmap_3dgrt_mcmc
 #    --skip-colmap     Reuse existing workspace/colmap/ (resume after crash)
@@ -61,6 +62,7 @@ MODEL="colmap_3dgut"
 SKIP_COLMAP=false
 PREVIEW=false
 OUTPUT_DIR=""
+BLUR_PCT=20
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -70,6 +72,7 @@ while [[ $# -gt 0 ]]; do
       exit 0 ;;
     --fps)         FPS_ARG="$2";    shift 2 ;;
     --iters)       N_ITERS="$2";    shift 2 ;;
+    --blur-pct)    BLUR_PCT="$2";   shift 2 ;;
     --model)       MODEL="$2";      shift 2 ;;
     --output-dir)  OUTPUT_DIR="$2"; shift 2 ;;
     --skip-colmap) SKIP_COLMAP=true; shift ;;
@@ -87,6 +90,7 @@ echo "=== splat.sh started at $(date) ===" > "$LOG"
 banner "quicksplat — 3D Gaussian Splatting Pipeline"
 log "Working dir : $WORK_DIR"
 log "Log file    : $LOG"
+log "Follow progress from another terminal:  tail -f $LOG"
 
 # ── Sanity check installation ─────────────────────────────────────────────────
 [[ -d "$CONDA_BASE" ]]              || die "Conda not found at $CONDA_BASE. Run install/setup_linux.sh first."
@@ -140,11 +144,11 @@ log "Rotation   : ${VID_ROT}°"
 if [[ -z "$FPS_ARG" ]]; then
   FPS=$(python3 -c "
 dur=$VID_DUR
-raw=$TARGET_FRAMES/dur
+raw=${TARGET_FRAMES}*2/dur
 options=[1,2,3,4,5,6,8,10]
 print(min(options, key=lambda x: abs(x-raw)))
 ")
-  log "Auto extraction rate: ${FPS} fps → ~$(python3 -c "print(int($FPS*$VID_DUR))") frames"
+  log "Auto extraction rate: ${FPS} fps → ~$(python3 -c "print(int($FPS*$VID_DUR))") frames (picker will select $TARGET_FRAMES best)"
 else
   FPS="$FPS_ARG"
   log "User-specified extraction rate: ${FPS} fps"
@@ -200,9 +204,20 @@ fi
 
 [[ $FRAME_COUNT -lt 20 ]] && die "Only $FRAME_COUNT frames extracted. Check $LOG."
 
+# ── PHASE 2.5: Sharp frame selection ─────────────────────────────────────────
 if [[ "$SKIP_COLMAP" == false ]]; then
-  log "Copying frames into COLMAP workspace..."
-  cp "$FRAMES_DIR"/frame_*.jpg "$COLMAP_WS/images/"
+  banner "PHASE 2.5 — Selecting sharpest frames"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  python3 "$SCRIPT_DIR/install/select_frames.py" \
+    "$FRAMES_DIR" \
+    "$COLMAP_WS/images" \
+    --target "$TARGET_FRAMES" \
+    --blur-pct "$BLUR_PCT" \
+    2>&1 | tee -a "$LOG"
+
+  FRAME_COUNT=$(ls "$COLMAP_WS/images"/frame_*.jpg 2>/dev/null | wc -l)
+  ok "Selected $FRAME_COUNT frames → $COLMAP_WS/images"
+  [[ $FRAME_COUNT -lt 20 ]] && die "Too few frames selected ($FRAME_COUNT). Try --blur-pct 10 or lower."
 fi
 
 # ── PHASE 3: COLMAP ───────────────────────────────────────────────────────────
