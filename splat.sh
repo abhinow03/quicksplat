@@ -37,6 +37,9 @@ TARGET_FRAMES=150
 DEFAULT_ITERS=30000
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Override CONDA_BASE if setup_linux.sh wrote a config with a different conda path
+[[ -f "${HOME}/3dgrut_setup/config" ]] && source "${HOME}/3dgrut_setup/config"
+
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 

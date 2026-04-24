@@ -60,23 +60,59 @@ else
   warn "Only ${FREE_GB}GB free. You may run out of space during setup (need ~20GB)."
 fi
 
-# ── 2. Miniforge (conda) ──────────────────────────────────────────────────────
-step "Checking conda..."
+# ── 2. Conda: detect existing or install Miniforge ───────────────────────────
+step "Looking for an existing conda / mamba installation..."
 
-if [[ -f "$CONDA_ROOT/bin/conda" ]]; then
-  skip "Conda already installed at $CONDA_ROOT"
+_found_conda=""
+
+# Check PATH first
+if command -v conda &>/dev/null; then
+  _found_conda="$(conda info --base 2>/dev/null)"
+  ok "Found conda in PATH at ${_found_conda}"
+elif command -v mamba &>/dev/null; then
+  _found_conda="$(mamba info --base 2>/dev/null)"
+  ok "Found mamba in PATH at ${_found_conda}"
+fi
+
+# Scan common install locations if not in PATH
+if [[ -z "$_found_conda" ]]; then
+  for _candidate in \
+    "${HOME}/miniconda3" \
+    "${HOME}/miniforge3" \
+    "${HOME}/mambaforge" \
+    "${HOME}/anaconda3" \
+    "/opt/conda" \
+    "/opt/miniconda3" \
+    "/opt/anaconda3"; do
+    if [[ -f "${_candidate}/bin/conda" ]]; then
+      _found_conda="$_candidate"
+      ok "Found conda at ${_found_conda} (not in PATH)"
+      break
+    fi
+  done
+fi
+
+if [[ -n "$_found_conda" ]]; then
+  CONDA_ROOT="$_found_conda"
+  skip "Skipping Miniforge install — using existing conda at ${CONDA_ROOT}"
+elif [[ -f "${CONDA_ROOT}/bin/conda" ]]; then
+  skip "Miniforge already installed at ${CONDA_ROOT}"
 else
-  step "Downloading Miniforge installer..."
+  step "No conda found — installing Miniforge into ${CONDA_ROOT}..."
   MINIFORGE_URL="https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
   MINIFORGE_SH="/tmp/miniforge_install.sh"
   curl -fsSL "$MINIFORGE_URL" -o "$MINIFORGE_SH" || fail "Failed to download Miniforge."
   bash "$MINIFORGE_SH" -b -p "$CONDA_ROOT" 2>&1 | tee -a "$LOG"
   rm -f "$MINIFORGE_SH"
-  ok "Miniforge installed at $CONDA_ROOT"
+  ok "Miniforge installed at ${CONDA_ROOT}"
 fi
 
-source "$CONDA_ROOT/etc/profile.d/conda.sh"
-source "$CONDA_ROOT/etc/profile.d/mamba.sh" 2>/dev/null || true
+source "${CONDA_ROOT}/etc/profile.d/conda.sh"
+source "${CONDA_ROOT}/etc/profile.d/mamba.sh" 2>/dev/null || true
+
+# Write the resolved conda path so splat.sh picks it up automatically
+echo "CONDA_BASE=${CONDA_ROOT}" > "${INSTALL_ROOT}/config"
+ok "Wrote ${INSTALL_ROOT}/config (CONDA_BASE=${CONDA_ROOT})"
 
 # ── 3. Clone 3DGRUT ───────────────────────────────────────────────────────────
 step "Checking 3DGRUT repo..."
@@ -126,10 +162,10 @@ if grep -q "LPIPS metric unavailable" "$TRAINER" 2>/dev/null; then
   skip "trainer.py already patched"
 else
   step "Patching trainer.py to make LPIPS optional (avoids crash on servers without internet)..."
-  python3 - <<'PYEOF'
+  python3 - "$TRAINER" <<'PYEOF'
 import re, sys
 
-path = "$TRAINER"
+path = sys.argv[1]
 with open(path) as f:
     src = f.read()
 
