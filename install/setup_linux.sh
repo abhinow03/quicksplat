@@ -127,7 +127,11 @@ else
   ok "3DGRUT cloned"
 fi
 
-# ── 4. Conda env: tools (COLMAP + ffmpeg) ────────────────────────────────────
+# ── 4. Install UV ───────────────────────────────────────────────────────────
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# ── 5. Conda env: tools (COLMAP + ffmpeg) ────────────────────────────────────
 step "Checking 'tools' conda env..."
 
 if conda env list | grep -q "^tools "; then
@@ -140,7 +144,7 @@ else
   ok "'tools' env created"
 fi
 
-# ── 5. Conda env: 3dgrut (training) ──────────────────────────────────────────
+# ── 6. Conda env: 3dgrut (training) ──────────────────────────────────────────
 step "Checking '3dgrut' conda env..."
 
 if conda env list | grep -q "^3dgrut "; then
@@ -150,11 +154,12 @@ else
   step "This is the slow step. Get a coffee."
   cd "$REPO_DIR"
   # WITH_GCC11=1 uses gcc-11 for CUDA builds (required — GCC 14 is too new for CUDA 11.8)
-  WITH_GCC11=1 bash install.sh 2>&1 | tee -a "$LOG"
+  CUDA_VERSION=12 ./scripts/create_venv_cuda.sh
+  WITH_GCC11=1 bash ./install_env_uv.sh 2>&1 | tee -a "$LOG"
   ok "'3dgrut' env created"
 fi
 
-# ── 6. Patch trainer.py (LPIPS offline fix) ──────────────────────────────────
+# ── 7. Patch trainer.py (LPIPS offline fix) ──────────────────────────────────
 step "Checking trainer.py patch (LPIPS offline fix)..."
 
 TRAINER="$REPO_DIR/threedgrut/trainer.py"

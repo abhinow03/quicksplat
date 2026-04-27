@@ -37,6 +37,14 @@ TARGET_FRAMES=150
 DEFAULT_ITERS=30000
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Detect venv (new install style)
+VENV_PATH="${REPO_3DGRUT}/.venv"
+USE_VENV=false
+
+if [[ -f "${VENV_PATH}/bin/activate" ]]; then
+  USE_VENV=true
+fi
+
 # Override CONDA_BASE if setup_linux.sh wrote a config with a different conda path
 [[ -f "${HOME}/3dgrut_setup/config" ]] && source "${HOME}/3dgrut_setup/config"
 
@@ -91,7 +99,11 @@ log "Log file    : $LOG"
 # ── Sanity check installation ─────────────────────────────────────────────────
 [[ -d "$CONDA_BASE" ]]              || die "Conda not found at $CONDA_BASE. Run install/setup_linux.sh first."
 [[ -d "$REPO_3DGRUT" ]]            || die "3DGRUT repo not found at $REPO_3DGRUT. Run install/setup_linux.sh first."
-[[ -d "$CONDA_BASE/envs/$ENV_3DGRUT" ]] || die "Conda env '$ENV_3DGRUT' not found."
+
+if [[ "$USE_VENV" == false ]]; then
+  [[ -d "$CONDA_BASE/envs/$ENV_3DGRUT" ]] || die "No .venv or conda env '$ENV_3DGRUT' found."
+fi
+
 [[ -d "$CONDA_BASE/envs/$ENV_TOOLS" ]]  || die "Conda env '$ENV_TOOLS' not found."
 
 source "$CONDA_BASE/etc/profile.d/conda.sh"
@@ -281,8 +293,16 @@ fi
 # ── PHASE 4: Training ─────────────────────────────────────────────────────────
 banner "PHASE 4 — Training 3DGRUT (${N_ITERS} iters, model: ${MODEL})"
 
-conda activate "$ENV_3DGRUT"
 cd "$REPO_3DGRUT"
+
+if [[ "$USE_VENV" == true ]]; then
+  log "Using .venv environment"
+  source "${VENV_PATH}/bin/activate"
+else
+  log "Using conda env: $ENV_3DGRUT"
+  conda activate "$ENV_3DGRUT"
+fi
+
 
 log "Dataset : $DENSE_DIR"
 log "Output  : $PLY_OUT"
