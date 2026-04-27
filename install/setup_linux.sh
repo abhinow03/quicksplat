@@ -127,6 +127,10 @@ else
   ok "3DGRUT cloned"
 fi
 
+# ── 3. Install UV ───────────────────────────────────────────────────────────
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # ── 4. Conda env: tools (COLMAP + ffmpeg) ────────────────────────────────────
 step "Checking 'tools' conda env..."
 
@@ -150,7 +154,8 @@ else
   step "This is the slow step. Get a coffee."
   cd "$REPO_DIR"
   # WITH_GCC11=1 uses gcc-11 for CUDA builds (required — GCC 14 is too new for CUDA 11.8)
-  WITH_GCC11=1 bash install.sh 2>&1 | tee -a "$LOG"
+  CUDA_VERSION=12 ./scripts/create_venv_cuda.sh
+  WITH_GCC11=1 bash ./install_env_uv.sh 2>&1 | tee -a "$LOG"
   ok "'3dgrut' env created"
 fi
 
